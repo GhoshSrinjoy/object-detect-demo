@@ -5,20 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Object Detection (Browser)</title>
   <style>
-    :root{--ink:#0f172a;--muted:#64748b;--ring:#22d3ee}
+    :root{--ink:#e5e7eb;--muted:#93c5fd;--ring:#22d3ee}
     *{box-sizing:border-box}
-    body{margin:0;background:#0b1220;color:#e5e7eb;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{margin:0;background:#0b1220;color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     header{padding:10px 14px;border-bottom:1px solid #1f2937;background:#0f172a}
-    .wrap{max-width:920px;margin:16px auto;padding:0 12px;display:grid;gap:12px}
+    .wrap{max-width:980px;margin:16px auto;padding:0 12px;display:grid;gap:12px}
     .panel{background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:12px}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    button{cursor:pointer;border:1px solid #374151;background:#111827;color:#e5e7eb;border-radius:10px;padding:8px 12px;font-weight:700}
+    label{color:#93c5fd}
+    select,button{cursor:pointer;border:1px solid #374151;background:#111827;color:#e5e7eb;border-radius:10px;padding:8px 12px;font-weight:700}
     button:disabled{opacity:.6;cursor:not-allowed}
-    #stage{position:relative;aspect-ratio:4/3;max-width:900px;width:100%;border-radius:12px;overflow:hidden;border:1px solid #1f2937;background:#0b1220}
+    #stage{position:relative;aspect-ratio:4/3;max-width:960px;width:100%;border-radius:12px;overflow:hidden;border:1px solid #1f2937;background:#0b1220}
     video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
     .badge{padding:2px 8px;border-radius:999px;background:#111827;border:1px solid #374151;color:#93c5fd}
+    #modelDesc{color:#cbd5e1}
   </style>
-  <!-- Pinned TFJS + COCO-SSD UMD bundles -->
+
+  <!-- TFJS + COCO-SSD (for the COCO option) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.16.0/dist/tf-backend-webgl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
@@ -28,11 +31,21 @@
 
   <main class="wrap">
     <div class="panel row">
+      <label>Model</label>
+      <select id="modelSel">
+        <option value="coco" selected>COCO-SSD (TF.js, lite_mobilenet_v2)</option>
+        <option value="yolov8">YOLOv8n (Transformers.js)</option>
+        <option value="detr">DETR-ResNet-50 (Transformers.js)</option>
+      </select>
+
       <button id="start">Start camera</button>
       <button id="stop" disabled>Stop</button>
-      <span class="badge">Runs in your browser (WebGL)</span>
+
+      <span class="badge">Runs fully in your browser</span>
       <span id="status" class="badge" style="color:#34d399;border-color:#14532d;background:#052e2b">ready</span>
     </div>
+
+    <div class="panel" id="modelDesc"></div>
 
     <div id="stage" class="panel">
       <video id="video" autoplay muted playsinline></video>
@@ -40,117 +53,201 @@
     </div>
 
     <div class="panel" style="color:#93c5fd">
-      Tip: GitHub Pages serves over HTTPS, so the webcam prompt works. On iOS/Safari you must click “Start camera” (autoplay requires a gesture).
+      Tip: GitHub Pages is HTTPS, so webcam prompts work. On iOS, users must click “Start camera” (required by Safari).
     </div>
   </main>
 
-<script>
-(async function(){
-  const $ = id => document.getElementById(id);
-  const video = $('video');
-  const canvas = $('overlay');
-  const ctx = canvas.getContext('2d');
-  const startBtn = $('start');
-  const stopBtn = $('stop');
-  const status = $('status');
+<script type="module">
+const $ = id => document.getElementById(id);
+const video = $('video');
+const canvas = $('overlay');
+const ctx = canvas.getContext('2d');
+const startBtn = $('start');
+const stopBtn = $('stop');
+const statusEl = $('status');
+const modelSel = $('modelSel');
+const modelDesc = $('modelDesc');
 
-  let stream = null, model = null, running = false;
+// ---- Model descriptions ----
+const INFO = {
+  coco: {
+    title: 'COCO-SSD (TF.js, lite_mobilenet_v2)',
+    text: 'Lightweight single-shot detector trained on COCO (80 classes). Fast startup (~7–12 MB), good for laptops and phones. Uses WebGL via TensorFlow.js.'
+  },
+  yolov8: {
+    title: 'YOLOv8n (Transformers.js)',
+    text: 'Tiny YOLO variant (n) with strong speed/accuracy trade-off. Browser execution via Transformers.js (WASM/WebGPU). Larger download than COCO-SSD but better boxes on many scenes.'
+  },
+  detr: {
+    title: 'DETR-ResNet-50 (Transformers.js)',
+    text: 'End-to-end transformer detector (DETR). Robust in crowded scenes with fewer duplicate boxes. Heavier and slower to warm up.'
+  }
+};
+function updateDesc() {
+  const k = modelSel.value;
+  modelDesc.innerHTML = `<strong>${INFO[k].title}</strong><br>${INFO[k].text}`;
+}
+updateDesc();
 
-  function setStatus(s, ok=true){
-    status.textContent = s;
-    status.style.color = ok ? '#34d399' : '#fda4af';
-    status.style.borderColor = ok ? '#14532d' : '#7f1d1d';
-    status.style.background = ok ? '#052e2b' : '#2b0b0b';
+// ---- Status helper ----
+function setStatus(s, ok=true){
+  statusEl.textContent = s;
+  statusEl.style.color = ok ? '#34d399' : '#fda4af';
+  statusEl.style.borderColor = ok ? '#14532d' : '#7f1d1d';
+  statusEl.style.background = ok ? '#052e2b' : '#2b0b0b';
+}
+
+// ---- Canvas sizing ----
+function resizeCanvas(){
+  const r = video.getBoundingClientRect();
+  canvas.width = video.videoWidth || r.width;
+  canvas.height = video.videoHeight || r.height;
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ---- Model loader (returns a detect(imgElOrCanvas) fn) ----
+let current = {kind:null, detect:null, cleanup:()=>{}};
+
+async function loadModel(kind){
+  if(current.kind === kind && current.detect) return current;
+  // cleanup old (if any)
+  current.cleanup?.();
+  current = {kind:null, detect:null, cleanup:()=>{}};
+
+  if(kind === 'coco'){
+    setStatus('loading COCO-SSD…');
+    await tf.setBackend('webgl'); await tf.ready();
+    const model = await cocoSsd.load({base:'lite_mobilenet_v2'});
+    current.detect = async (img) => {
+      const out = await model.detect(img);
+      // unify shape
+      return out.map(p => ({ x:p.bbox[0], y:p.bbox[1], w:p.bbox[2], h:p.bbox[3], label:p.class, score:p.score }));
+    };
+    current.cleanup = ()=>{};
+    current.kind = 'coco';
+    setStatus('model ready ✓');
+    return current;
   }
 
-  function resizeCanvas(){
-    const r = video.getBoundingClientRect();
-    canvas.width = video.videoWidth || r.width;
-    canvas.height = video.videoHeight || r.height;
-  }
+  // Transformers.js path (YOLO / DETR)
+  setStatus(`loading ${kind==='yolov8'?'YOLOv8n':'DETR'}…`);
+  const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.1');
+  // Speed tips: cache in IndexedDB, prefer WebGPU when available
+  env.cacheDir = 'indexeddb://object-detect-cache';
+  env.allowLocalModels = false;
 
-  async function ensureModel(){
-    if (model) return model;
-    setStatus('loading model…');
-    await tf.setBackend('webgl'); // fastest broadly supported
-    await tf.ready();
-    model = await cocoSsd.load({base: 'lite_mobilenet_v2'}); // small + fast
-    setStatus('model loaded ✓');
-    return model;
-  }
+  const repo = (kind === 'yolov8') ? 'Xenova/yolov8n' : 'Xenova/detr-resnet-50';
+  const pipe = await pipeline('object-detection', repo);
 
-  async function start(){
-    try{
-      startBtn.disabled = true;
-      await ensureModel();
-      setStatus('requesting camera…');
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      video.srcObject = stream;
-      await new Promise(res => video.onloadedmetadata = res);
-      resizeCanvas();
-      running = true;
-      stopBtn.disabled = false;
-      setStatus('running');
-      loop();
-    }catch(err){
-      console.error(err);
-      setStatus('camera denied / unavailable', false);
-      startBtn.disabled = false;
-    }
-  }
+  // For video, capture a frame to a hidden canvas
+  const grab = document.createElement('canvas');
+  const gtx = grab.getContext('2d', { willReadFrequently:true });
 
-  function stop(){
-    running = false;
-    stopBtn.disabled = true;
+  current.detect = async () => {
+    if (!video.videoWidth) return [];
+    grab.width = video.videoWidth; grab.height = video.videoHeight;
+    gtx.drawImage(video, 0, 0, grab.width, grab.height);
+    // pipe accepts Canvas/ImageData/HTMLImageElement
+    const out = await pipe(grab, { threshold: 0.35, topk: 100 });
+    return out.map(p => ({ x:p.box.x, y:p.box.y, w:p.box.width, h:p.box.height, label:p.label, score:p.score }));
+  };
+  current.cleanup = ()=>{};
+  current.kind = kind;
+  setStatus('model ready ✓');
+  return current;
+}
+
+// ---- Run loop ----
+let stream = null, running = false;
+
+async function start(){
+  try{
+    startBtn.disabled = true;
+    await loadModel(modelSel.value);
+    updateDesc();
+
+    setStatus('requesting camera…');
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    await new Promise(res => video.onloadedmetadata = res);
+    resizeCanvas();
+
+    running = true;
+    stopBtn.disabled = false;
+    setStatus('running');
+    loop();
+  }catch(err){
+    console.error(err);
+    setStatus('camera denied / unavailable', false);
     startBtn.disabled = false;
-    if (stream){
-      for (const t of stream.getTracks()) t.stop();
-      stream = null;
+  }
+}
+
+function stop(){
+  running = false;
+  stopBtn.disabled = true;
+  startBtn.disabled = false;
+  if (stream){
+    for (const t of stream.getTracks()) t.stop();
+    stream = null;
+  }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  setStatus('stopped');
+}
+
+async function loop(){
+  if (!running) return;
+
+  if (canvas.width !== video.videoWidth) resizeCanvas();
+
+  // detect
+  let preds = [];
+  try{
+    if (current.kind === 'coco') {
+      preds = await current.detect(video);
+    } else {
+      preds = await current.detect(); // grabs a frame internally
     }
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    setStatus('stopped');
+  }catch(e){
+    console.error(e);
   }
 
-  async function loop(){
-    if (!running || !model) return;
-    // keep canvas in sync if camera changed size
-    if (canvas.width !== video.videoWidth) resizeCanvas();
+  draw(preds);
+  requestAnimationFrame(loop);
+}
 
-    const preds = await model.detect(video); // [{bbox:[x,y,w,h],score,class},...]
-    draw(preds);
-    requestAnimationFrame(loop);
-  }
+function draw(preds){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.lineWidth = Math.max(2, canvas.width/400);
+  ctx.font = `bold ${Math.max(12, canvas.width/45)}px system-ui`;
 
-  function draw(preds){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.lineWidth = Math.max(2, canvas.width/400);
-    ctx.font = `bold ${Math.max(12, canvas.width/45)}px system-ui`;
+  preds.forEach(p => {
+    if (p.score < 0.5) return;
+    // box
+    ctx.strokeStyle = '#22d3ee';
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur = 6;
+    ctx.strokeRect(p.x, p.y, p.w, p.h);
+    ctx.shadowBlur = 0;
+    // label
+    const label = `${p.label} ${(p.score*100|0)}%`;
+    const tw = ctx.measureText(label).width + 10;
+    const th = parseInt(ctx.font,10) + 6;
+    ctx.fillStyle = 'rgba(2,6,23,0.85)';
+    ctx.fillRect(p.x, Math.max(0,p.y-th), tw, th);
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText(label, p.x+5, Math.max(th-4,p.y-4));
+  });
+}
 
-    preds.forEach(p => {
-      if (p.score < 0.5) return;
-      const [x,y,w,h] = p.bbox;
-      // box
-      ctx.strokeStyle = '#22d3ee';
-      ctx.shadowColor = '#22d3ee';
-      ctx.shadowBlur = 6;
-      ctx.strokeRect(x, y, w, h);
-      ctx.shadowBlur = 0;
-      // label bg
-      const label = `${p.class} ${(p.score*100|0)}%`;
-      const tw = ctx.measureText(label).width + 10;
-      const th = parseInt(ctx.font,10) + 6;
-      ctx.fillStyle = 'rgba(2,6,23,0.85)';
-      ctx.fillRect(x, Math.max(0,y-th), tw, th);
-      // text
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillText(label, x+5, Math.max(th-4,y-4));
-    });
-  }
-
-  window.addEventListener('resize', resizeCanvas);
-  startBtn.addEventListener('click', start);
-  stopBtn.addEventListener('click', stop);
-})();
+// ---- Events ----
+modelSel.addEventListener('change', async ()=>{
+  stop();
+  await loadModel(modelSel.value);
+  updateDesc();
+});
+startBtn.addEventListener('click', start);
+stopBtn.addEventListener('click', stop);
 </script>
 </body>
 </html>
