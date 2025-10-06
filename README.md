@@ -1,10 +1,10 @@
 # Object Detection (Browser)
 
-A single-page, **client-side** object detection demo you can host on **GitHub Pages** and embed in **Google Sites**.  
-No server, no API keys — everything runs in the user’s browser.
+A single-page, **client-side** object detection demo hosted on **GitHub Pages** and embedded in **Google Sites**.  
+No server, no API keys, everything runs in the user’s browser.
 
 **Live URL**  
-`https://<your-username>.github.io/object-detect-demo/`
+`https://ghoshsrinjoy.github.io/object-detect-demo/`
 
 ---
 
@@ -21,7 +21,7 @@ No server, no API keys — everything runs in the user’s browser.
 
 ## Quick start (local preview)
 
-Just open `index.html` in a browser. For webcam to work locally, prefer a local web server:
+Just open `index.html` in a browser. For the webcam to work locally, prefer a local web server:
 
 ```bash
 # Python
