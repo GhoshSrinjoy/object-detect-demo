@@ -1,4 +1,4 @@
-*“My GPU asked for time off. That’s fine—this one runs right in your browser.”*
+*“My object detector spotted my coffee mug 47 times this morning. I think it’s trying to tell me something about caffeine dependence.”*
 
 # Object Detection (Browser)
 
