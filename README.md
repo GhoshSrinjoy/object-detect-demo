@@ -23,7 +23,7 @@ This project shows real-time, in-browser object detection with a simple model se
 
 Spinning up infra just to test detection is a pain. Teams need a zero-setup way to:
 - Validate behavior on real video quickly.
-- Share experiments via a link—no accounts, no tokens.
+- Share experiments via a link, no accounts, no tokens.
 - Prototype education/kiosk experiences that must run fully in the browser.
 
 This repo cuts the overhead to nearly zero. 🧪
