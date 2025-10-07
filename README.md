@@ -13,7 +13,7 @@ A single-page, client-side object detection app. No server. No API keys. Just a 
 This project shows real-time, in-browser object detection with a simple model selector. Pick a model, allow camera access, and watch boxes + labels render on a canvas. Everything runs on the client, so sharing a link is all it takes. ⚡
 
 **Why it’s useful**
-- Instant demo for stakeholders or classes—no installs.
+- Instant demo for stakeholders or classes, no installs.
 - Works on laptops and phones.
 - Easy to fork, tweak, and host on any static site.
 
@@ -39,9 +39,9 @@ This repo cuts the overhead to nearly zero. 🧪
 4. Drive the loop with `requestAnimationFrame` for smooth UX.
 
 **Model selector**
-- **COCO-SSD (TF.js, `lite_mobilenet_v2`)** — fast startup, 80 classes, good mobile performance.
-- **YOLOv8n (Transformers.js)** — strong accuracy/speed trade-off, slightly larger download.
-- **DETR-ResNet-50 (Transformers.js)** — robust in crowded scenes; heavier and slower.
+- **COCO-SSD (TF.js, `lite_mobilenet_v2`)** : fast startup, 80 classes, good mobile performance.
+- **YOLOv8n (Transformers.js)** : strong accuracy/speed trade-off, slightly larger download.
+- **DETR-ResNet-50 (Transformers.js)** : robust in crowded scenes; heavier and slower.
 
 **Features**
 - Real-time drawing of bounding boxes and labels.
