@@ -101,6 +101,3 @@ Ship with **COCO-SSD** selected. Prefetch **YOLOv8n** after idle so switching fe
 
 *Happy detecting!* 🤖
 
-
-::contentReference[oaicite:0]{index=0}
-
