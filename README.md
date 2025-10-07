@@ -47,57 +47,60 @@ This repo cuts the overhead to nearly zero. 🧪
 - Real-time drawing of bounding boxes and labels.
 - Everything client-side; no network calls after model load.
 - Clean UI with loading status and errors surfaced clearly. 🧭
+**Quick start (local preview)**  
 
-**Quick start (local preview)**
-```bash
-# Python
+To try it locally, run a simple web server and open the app in your browser:  
+
+## Using Python
+
 python -m http.server 8080
 
-# or Node
+Or using Node
+
 npx http-server -p 8080
 
-Skills
+Then open http://localhost:8080 in your browser, allow camera access when prompted, and you’re ready to start detecting. 📷
 
-This repo showcases: JavaScript (ES modules), HTML/CSS, TensorFlow.js & Transformers.js, MediaDevices getUserMedia, Canvas 2D, async loading, simple performance hygiene (throttling where needed), and friendly UX for ML demos (permissions, loading, failure states). 🛠️
+## Skills
 
-Results & Business Recommendation
+This project highlights: JavaScript (ES modules), HTML/CSS, TensorFlow.js & Transformers.js, MediaDevices `getUserMedia`, Canvas 2D, async loading, simple performance hygiene (throttling where needed), and friendly UX for ML demos (permissions, loading, failure states). 🛠️
 
-What you get
+---
 
-⚡ Zero backend and zero keys.
+## Results & Business Recommendation
 
-📷 Live detection in the browser.
+**What you get**
+- ⚡ **Zero backend** and **zero keys**
+- 📷 **Live detection** directly in the browser
+- 🔗 **Shareable link** that works on most modern devices
 
-🔗 Shareable link that works on most modern devices.
+**Which model to default to**
+- Start with **COCO-SSD** for instant load and wide compatibility.  
+- Offer **YOLOv8n** as the balanced option for laptops/desktops.  
+- Keep **DETR-ResNet-50** as the advanced choice for dense scenes or stronger machines.
 
-Which model to default to
+---
 
-Start with COCO-SSD for instant load and wide compatibility.
+## Recommendation
 
-Offer YOLOv8n as the “balanced” option for laptops/desktops.
+Ship with **COCO-SSD** selected. Prefetch **YOLOv8n** after idle so switching feels snappy. Label **DETR** as heavier but robust in busy scenes. That balance keeps first-time users happy while giving power users a clear upgrade path. 🎯
 
-Keep DETR-ResNet-50 as “advanced” for dense scenes or users with stronger machines.
+---
 
-Recommendation
-Ship with COCO-SSD selected. Prefetch YOLOv8n after idle so switching feels snappy. Label DETR as heavier but robust in busy scenes. That balance keeps first-time users happy while giving power users a clear upgrade path. 🎯
+## Next Steps
 
-Next Steps
+🖼️ Add upload mode (images/videos) alongside webcam.  
+📊 Show FPS/latency overlay to compare models.  
+🧵 Move inference into a Web Worker for extra UI smoothness.  
+🎬 Add snapshot/record options for sharing results.  
+📦 Package as a PWA for offline kiosk use.  
+♿ Improve accessibility: keyboard start/stop, clearer errors.  
+🔧 Add confidence thresholds & per-class filters to tune predictions.
 
-🖼️ Add upload mode (images/videos) alongside webcam.
+---
 
-📊 Show FPS/latency overlay to compare models.
+*Happy detecting!* 🤖
 
-🧵 Move inference into a Web Worker for extra UI smoothness.
-
-🎬 Snapshot/record short clips for sharing.
-
-📦 PWA packaging for offline kiosks.
-
-♿ Accessibility polish: keyboard start/stop, clearer errors.
-
-🔧 Confidence threshold & per-class filters to tune predictions.
-
-Happy detecting!
 
 ::contentReference[oaicite:0]{index=0}
 
